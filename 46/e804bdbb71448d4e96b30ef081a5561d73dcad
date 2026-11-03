@@ -1,0 +1,91 @@
+.gitignore
+  s_92338c76914885::t_111a9345a6defd 1-24
+.oxlintrc.json
+  s_92338c76914885::t_0aa420bce3c7d0 1-8
+README.md
+  s_92338c76914885::t_59660cfe8cf12f 1-84
+index.html
+  s_92338c76914885::t_f618db342d69f3 1-15
+package-lock.json
+  s_92338c76914885::t_6962fee5a58c50 1-2137
+package.json
+  s_92338c76914885::t_7291caf088ceeb 1-42
+public/favicon.svg
+  s_92338c76914885::t_ff69653c3af36b 1
+src/App.tsx
+  s_92338c76914885::t_a40be4a9e683c2 1-193
+src/components/ExportDialog.tsx
+  s_92338c76914885::t_a41adb281e2f55 1-126
+src/components/FanChart.tsx
+  s_92338c76914885::t_886696b0a107af 1-456
+src/components/Inspector.tsx
+  s_92338c76914885::t_597e0fe9b484a8 1-180
+src/components/Sidebar.tsx
+  s_92338c76914885::t_005de2e7a72130 1-359
+src/components/Stage.tsx
+  s_92338c76914885::t_86819c3642fecc 1-226
+src/components/TopBar.tsx
+  s_92338c76914885::t_e3762cf67bdf93 1-95
+src/env.d.ts
+  s_92338c76914885::t_e3644f93bbedca 1
+src/lib/actions.ts
+  s_92338c76914885::t_2df23f67e6c89f 1-186
+src/lib/geometry.ts
+  s_92338c76914885::t_1b7d8685e59874 1-317
+src/lib/hooks.ts
+  s_92338c76914885::t_796c0d602e34f8 1-10
+src/lib/labels.ts
+  s_92338c76914885::t_ccb9f78ebb5426 1-149
+src/lib/photo.test.ts
+  s_92338c76914885::t_e28e7ec4b74207 1-68
+src/lib/projectFile.test.ts
+  s_92338c76914885::t_3ea8d78c98f963 1-86
+src/lib/projectFile.ts
+  s_92338c76914885::t_2a0325119afbb0 1-227
+src/lib/store.ts
+  s_92338c76914885::t_c7e5aed1ef07f3 1-111
+src/lib/themes.ts
+  s_92338c76914885::t_6e7634370cb2f1 1-348
+src/lib/types.ts
+  s_92338c76914885::t_6e1f8987ddbff7 1-118
+src/main.tsx
+  s_92338c76914885::t_1db64af6441925 1-24
+src/styles.css
+  s_92338c76914885::t_501deb6ec24867 1-1191
+tsconfig.app.json
+  s_92338c76914885::t_ee7c79b8d6fce4 1-27
+tsconfig.json
+  s_92338c76914885::t_731c7d1dadbffa 1-7
+tsconfig.node.json
+  s_92338c76914885::t_a7023cc3d0efbe 1-23
+vite.config.ts
+  s_92338c76914885::t_d11bce35b6bd61 1-13
+src/components/controls.tsx
+  s_92338c76914885::t_a2c845e828daa4 1-169
+src/lib/export.ts
+  s_92338c76914885::t_8b4ff961803827 1-143
+src/lib/geometry.test.ts
+  s_92338c76914885::t_01c71d0ae48cce 1-88
+src/lib/photo.ts
+  s_92338c76914885::t_1f2366ca50bc1f 1-39
+src/lib/storage.ts
+  s_92338c76914885::t_3e65420893e9ec 1-166
+src/lib/textures.ts
+  s_92338c76914885::t_53533b47269ccb 1-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "46e804bdbb71448d4e96b30ef081a5561d73dcad",
+  "prompts": {},
+  "sessions": {
+    "s_92338c76914885": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "9fe1ab39-166c-461a-a4ce-e1ff829567f4",
+        "model": "auto"
+      },
+      "human_author": "chrhodge <chrhodge@cisco.com>"
+    }
+  }
+}
