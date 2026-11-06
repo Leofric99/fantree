@@ -23,6 +23,8 @@
   <img src="docs/fantree-demo.png" alt="FanTree family fan chart editor" width="100%">
 </p>
 
+[View an example image export](docs/familyname-3840x2670.png)
+
 ## What Is It?
 
 FanTree is a local, browser-based editor for creating ancestor fan charts. Add names, dates and photos to each generation, position every image precisely, choose a visual theme, and export a print-ready chart as PNG, JPEG, WebP or SVG.
