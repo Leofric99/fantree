@@ -1,0 +1,19 @@
+README.md
+  s_9ec4bc270387d0::t_62dceb40bd8ba6 20-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3d9cd9332232276d9a05697c84ba601659616281",
+  "prompts": {},
+  "sessions": {
+    "s_9ec4bc270387d0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b025-6df7-7483-b63a-6de85766bd94",
+        "model": "unknown"
+      },
+      "human_author": "chrhodge <chrhodge@cisco.com>"
+    }
+  }
+}
