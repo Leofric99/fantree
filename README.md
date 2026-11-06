@@ -61,13 +61,9 @@ FanTree autosaves locally and keeps full undo/redo history. Export a portable `.
 
 ## Installation
 
-### Prerequisites
+### Linux and macOS
 
-[Node.js 20+](https://nodejs.org/)
-
-### Run locally
-
-Clone the repository, install the dependencies and start the development server:
+Install [Node.js 20+](https://nodejs.org/), clone the repository, install the dependencies and start the app:
 
 ```bash
 npm install
@@ -83,16 +79,9 @@ npm run build
 npm run preview
 ```
 
-### Build the Windows desktop app
+### Windows
 
-The desktop build uses Electron to open the Vite production output directly from `dist/index.html`; it does not start or require a local web server. On Windows, install dependencies and run:
-
-```powershell
-npm install
-npm run desktop:package
-```
-
-The `release` directory contains both the per-user NSIS `.exe` installer and the WiX `.msi` installer. To build only one format, use `npm run desktop:installer` or `npm run desktop:msi`. The package script also generates the Windows icon, installer header/sidebar, and uninstaller graphics from the FanTree branding.
+Download the [FanTree 1.0.0 Windows installer](https://github.com/Leofric99/fantree/releases/tag/1.0.0), run the installer, and then launch FanTree from the Start menu or desktop shortcut.
 
 ## Project Files
 
