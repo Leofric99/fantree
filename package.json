@@ -3,11 +3,18 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.cjs",
+  "author": "FanTree",
   "scripts": {
     "start": "vite",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "desktop:dev": "npm run build && electron .",
+    "desktop:dir": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-windows.ps1 -Target dir",
+    "desktop:installer": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-windows.ps1 -Target nsis",
+    "desktop:msi": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-windows.ps1 -Target msi",
+    "desktop:package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-windows.ps1 -Target both",
     "lint": "oxlint src",
     "test": "vitest run",
     "typecheck": "tsc -b"
@@ -33,10 +40,61 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^39.1.0",
+    "electron-builder": "^26.0.12",
     "oxlint": "^1.89.0",
     "typescript": "~7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
   },
-  "description": "Design beautiful, print-quality family fan charts with your ancestors' photos."
+  "description": "Design beautiful, print-quality family fan charts with your ancestors' photos.",
+  "build": {
+    "appId": "com.fantree.app",
+    "productName": "FanTree",
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "build/icon.svg",
+      "package.json",
+      "!node_modules/**/*"
+    ],
+    "win": {
+      "icon": "build/icon.svg",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "msi",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "FanTree-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "FanTree",
+      "installerIcon": "build/installerIcon.ico",
+      "uninstallerIcon": "build/uninstallerIcon.ico",
+      "installerHeader": "build/installerHeader.bmp",
+      "installerSidebar": "build/installerSidebar.bmp"
+    },
+    "fileAssociations": [
+      {
+        "ext": "fantree",
+        "name": "FanTree Project",
+        "description": "FanTree family fan chart project",
+        "role": "Editor",
+        "icon": "icon.ico"
+      }
+    ]
+  }
 }

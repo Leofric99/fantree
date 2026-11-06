@@ -83,6 +83,17 @@ npm run build
 npm run preview
 ```
 
+### Build the Windows desktop app
+
+The desktop build uses Electron to open the Vite production output directly from `dist/index.html`; it does not start or require a local web server. On Windows, install dependencies and run:
+
+```powershell
+npm install
+npm run desktop:package
+```
+
+The `release` directory contains both the per-user NSIS `.exe` installer and the WiX `.msi` installer. To build only one format, use `npm run desktop:installer` or `npm run desktop:msi`. The package script also generates the Windows icon, installer header/sidebar, and uninstaller graphics from the FanTree branding.
+
 ## Project Files
 
 Choose **Export project file** from the save icon or press `⌘/Ctrl S` to write one self-contained `.fantree` file. It includes:
