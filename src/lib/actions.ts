@@ -1,4 +1,5 @@
-import { slotCount } from './geometry'
+import { generationOf, slotCount } from './geometry'
+import { absoluteSlot, branchPeople, mergedTree, mirrorSlot } from './tree'
 import { newPhoto, useStore, emptyProject } from './store'
 import { buildPackage, parsePackage, upgradeProject, type PackageImage } from './projectFile'
 import { ACCEPTED_TYPES, getFullImage, importImage, referencedImages, restoreImage } from './storage'
@@ -75,6 +76,51 @@ export function swapSlots(a: SlotId, b: SlotId) {
   })
 }
 
+/** Reinterpret the displayed parent order without moving people on the chart. */
+export function setParentSide(side: 'father' | 'mother') {
+  const { project, selected } = st()
+  if (project.settings.layout.parentSide === side) return
+  const mirrorPeople = (people: Project['people']): Project['people'] =>
+    Object.fromEntries(Object.entries(people).map(([id, person]) => [mirrorSlot(Number(id)), person]))
+  st().update((p) => {
+    p.people = mirrorPeople(p.people)
+    if (p.tree) {
+      p.tree.people = mirrorPeople(p.tree.people)
+      p.tree.center = mirrorSlot(p.tree.center)
+    }
+    p.settings.layout.parentSide = side
+  })
+  if (selected !== null) st().select(mirrorSlot(selected))
+}
+
+/** Change centre using an index relative to the original centre. */
+export function setTreeCenter(center: SlotId) {
+  const { project } = st()
+  const current = project.tree?.center ?? 1
+  if (center === current) return
+  const tree = mergedTree(project)
+  if (center > 2 ** 40 || !Object.keys(tree).some((id) => {
+    let n = Number(id)
+    while (n > center) n = Math.floor(n / 2)
+    return n === center
+  })) return
+  tree[center] ??= { name: '', dates: '' }
+  const relative = generationOf(current) - generationOf(center)
+  st().update((p) => {
+    p.tree = { center, people: tree }
+    p.people = branchPeople(tree, center)
+    p.settings.layout.generations = Math.min(6, Math.max(0, p.settings.layout.generations + relative))
+  })
+  st().select(1)
+}
+
+/** Make an ancestor in the currently visible chart the centre. */
+export function setCentralPerson(slot: SlotId) {
+  const { project } = st()
+  if (slot <= 1 || !project.people[slot]) return
+  setTreeCenter(absoluteSlot(project.tree?.center ?? 1, slot))
+}
+
 export const PROJECT_ACCEPT = '.fantree,application/zip,application/json'
 
 function projectFileName(project: Project) {
@@ -141,7 +187,7 @@ export async function openProjectFile(file: File): Promise<void> {
         warnings.push('A photo in the file could not be decoded.')
       }
     }
-    for (const person of Object.values(project.people)) {
+    for (const person of [...Object.values(project.people), ...Object.values(project.tree?.people ?? {})]) {
       if (person.photo && !metas[person.photo.imageId]) delete person.photo
     }
     st().replaceProject(upgradeProject(project, metas), metas)

@@ -2,16 +2,17 @@ import { strFromU8, strToU8, unzipSync, zipSync, type Zippable } from 'fflate'
 import { computeGeometry, slotCount } from './geometry'
 import { fromAbsoluteOffsets } from './photo'
 import { defaultSettings } from './themes'
+import { referencedImages } from './storage'
 import type { ImageMeta, Person, Photo, Project } from './types'
 
 /**
- * `.fantree` project package (version 2): a standard zip archive containing
+ * `.fantree` project package (version 3): a standard zip archive containing
  *   project.json      – settings, names, and per-photo position/zoom/rotation/adjustments
  *   images/<id>.<ext> – the image bytes exactly as stored by the app
  * Version 1 files (a single JSON document with base64 data URLs) can still be read.
  */
 export const PACKAGE_FORMAT = 'fantree'
-export const PACKAGE_VERSION = 2
+export const PACKAGE_VERSION = 3
 const MANIFEST = 'project.json'
 const MAX_GENERATIONS = 6
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/
@@ -123,14 +124,14 @@ export function parsePackage(bytes: Uint8Array): ParsedPackage {
   const project = sanitizeProject(rawProject)
   const available = new Set(images.map((i) => i.id))
   let dropped = 0
-  for (const person of Object.values(project.people)) {
+  for (const person of [...Object.values(project.people), ...Object.values(project.tree?.people ?? {})]) {
     if (person.photo && !available.has(person.photo.imageId)) {
       delete person.photo
       dropped++
     }
   }
   if (dropped) warnings.push(`${dropped} photo${dropped === 1 ? '' : 's'} could not be restored.`)
-  const used = new Set(Object.values(project.people).flatMap((p) => (p.photo ? [p.photo.imageId] : [])))
+  const used = referencedImages(project)
   return { project, images: images.filter((i) => used.has(i.id)), warnings }
 }
 
@@ -174,24 +175,32 @@ function sanitizePhoto(raw: unknown, legacy: boolean): Photo | undefined {
 
 /** Accepts untrusted JSON and returns a well-formed project, filling gaps with defaults. */
 export function sanitizeProject(raw: unknown): Project {
-  const src = (raw ?? {}) as { version?: unknown; settings?: unknown; people?: unknown }
+  const src = (raw ?? {}) as { version?: unknown; settings?: unknown; people?: unknown; tree?: { center?: unknown; people?: unknown } }
   const legacy = src.version !== 2
   const settings = mergeDeep(defaultSettings(), src.settings)
-  settings.layout.generations = Math.round(num(settings.layout.generations, 5, 2, MAX_GENERATIONS))
-  const maxSlot = slotCount(MAX_GENERATIONS)
-  const people: Record<number, Person> = {}
-  if (src.people && typeof src.people === 'object') {
-    for (const [key, value] of Object.entries(src.people as Record<string, unknown>)) {
-      const slot = Number(key)
-      if (!Number.isInteger(slot) || slot < 1 || slot > maxSlot || !value || typeof value !== 'object') continue
-      const v = value as Partial<Person>
-      const person: Person = { name: str(v.name), dates: str(v.dates) }
-      const photo = sanitizePhoto(v.photo, legacy)
-      if (photo) person.photo = photo
-      people[slot] = person
+  if (settings.layout.parentSide !== 'mother') settings.layout.parentSide = 'father'
+  settings.layout.generations = Math.round(num(settings.layout.generations, 5, 0, MAX_GENERATIONS))
+  const sanitizePeople = (rawPeople: unknown, limit: number): Record<number, Person> => {
+    const people: Record<number, Person> = {}
+    if (rawPeople && typeof rawPeople === 'object') {
+      for (const [key, value] of Object.entries(rawPeople as Record<string, unknown>)) {
+        const slot = Number(key)
+        if (!Number.isSafeInteger(slot) || slot < 1 || slot > limit || !value || typeof value !== 'object') continue
+        const v = value as Partial<Person>
+        const person: Person = { name: str(v.name), dates: str(v.dates) }
+        const photo = sanitizePhoto(v.photo, legacy)
+        if (photo) person.photo = photo
+        people[slot] = person
+      }
     }
+    return people
   }
-  return { version: legacy ? 1 : 2, settings, people }
+  const people = sanitizePeople(src.people, slotCount(MAX_GENERATIONS))
+  const center = src.tree?.center
+  const tree = !legacy && typeof center === 'number' && Number.isSafeInteger(center) && center >= 1 && center <= 2 ** 40
+    ? { center, people: sanitizePeople(src.tree?.people, 2 ** 46) }
+    : undefined
+  return { version: legacy ? 1 : 2, settings, people, ...(tree ? { tree } : {}) }
 }
 
 /**

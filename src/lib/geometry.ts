@@ -202,7 +202,7 @@ export function computeGeometry(settings: Pick<Settings, 'layout' | 'title'>): C
         samples.push(polar(r1, a), polar(r2, a))
       }
       slots.push({
-        id: n + i,
+        id: n + (layout.parentSide === 'mother' ? n - 1 - i : i),
         gen: g,
         index: i,
         isCenter: false,

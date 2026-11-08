@@ -1,6 +1,9 @@
 import { Image as ImageIcon, LayoutGrid, Palette, Square, Type, Heading } from 'lucide-react'
 import { useState } from 'react'
 import { useStore } from '../lib/store'
+import { setParentSide } from '../lib/actions'
+import { TreeNavigator } from './TreeNavigator'
+import { MAX_LABEL_SCALE } from '../lib/labels'
 import { applyTheme, BOX_STYLES, FONTS, THEMES, TEXTURES, TONES } from '../lib/themes'
 import type { Aspect, BackgroundKind, BoxStyle, FontId, LabelStyle, Settings, StrokeDash, Texture, Tone } from '../lib/types'
 import { ColorField, Section, Segmented, Select, Slider, TextField, Toggle } from './controls'
@@ -241,7 +244,8 @@ function LabelsPanel({ s }: { s: Settings }) {
       </Section>
       <Section title="Typography">
         <Select<FontId> label="Font" value={l.font} options={FONT_OPTIONS} onChange={(v) => set('labels', 'font', v)} />
-        <Slider label="Size" value={l.size} min={0.5} max={1.8} step={0.01} format={pct} onChange={(v) => set('labels', 'size', v)} />
+        <Slider label="Size for all names" value={l.size} min={0.2} max={MAX_LABEL_SCALE} step={0.01} format={pct} onChange={(v) => set('labels', 'size', v)} />
+        <p className="hint">Scales the overlay and text with each frame. Long names wrap to fit.</p>
         <ColorField label="Text colour" value={l.color} onChange={(v) => set('labels', 'color', v)} />
       </Section>
       <Section title="Legibility">
@@ -299,8 +303,23 @@ function LayoutPanel({ s }: { s: Settings }) {
   const l = s.layout
   return (
     <>
+      <Section title="Centre person">
+        <TreeNavigator />
+      </Section>
+      <Section title="Parent order">
+        <Segmented
+          label="Left side of each parent pair"
+          value={l.parentSide}
+          onChange={setParentSide}
+          options={[
+            { id: 'father', label: 'Father' },
+            { id: 'mother', label: 'Mother' },
+          ]}
+        />
+        <p className="hint">Choose which parent is on the left. Existing photos stay in place and their relationships update.</p>
+      </Section>
       <Section title="Structure">
-        <Slider label="Generations" value={l.generations} min={2} max={6} onChange={(v) => set('layout', 'generations', v)} format={(v) => `${v} (${Math.pow(2, v + 1) - 1} frames)`} />
+        <Slider label="Generations" value={l.generations} min={0} max={6} onChange={(v) => set('layout', 'generations', v)} format={(v) => `${v} (${Math.pow(2, v + 1) - 1} frames)`} />
         <Slider label="Fan angle" value={l.span} min={160} max={360} onChange={(v) => set('layout', 'span', v)} format={(v) => `${Math.round(v)}°`} />
         <Slider label="Centre size" value={l.centerRadius} min={0.06} max={0.3} step={0.005} format={pct} onChange={(v) => set('layout', 'centerRadius', v)} />
         <Slider label="Outer ring emphasis" value={l.ringGrowth} min={-0.2} max={0.4} step={0.01} format={(v) => (v >= 0 ? '+' : '') + pct(v)} onChange={(v) => set('layout', 'ringGrowth', v)} />

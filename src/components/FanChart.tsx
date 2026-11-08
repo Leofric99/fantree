@@ -1,6 +1,6 @@
 import { memo, type ReactNode } from 'react'
 import { insetPath, type ChartGeom, type SlotGeom } from '../lib/geometry'
-import { arcPath, layoutLabel, type LabelLayout } from '../lib/labels'
+import { arcPath, centerBandPath, layoutLabel, type LabelLayout } from '../lib/labels'
 import { textureTile, TEXTURE_TILE_UNITS } from '../lib/textures'
 import { photoPlacement } from '../lib/photo'
 import { FONTS, fontStack, TONE_MATRICES } from '../lib/themes'
@@ -85,7 +85,14 @@ function Label({ slot, layout, settings }: { slot: SlotGeom; layout: LabelLayout
   if (layout.mode === 'arc') {
     return (
       <g>
-        {band && (
+        {band && (layout.band.rounded ? (
+          <path
+            clipPath={clip}
+            d={centerBandPath(layout.band.r, layout.band.width, layout.band.a0!, layout.band.a1!)}
+            fill={labels.bandColor}
+            fillOpacity={labels.bandOpacity}
+          />
+        ) : (
           <path
             clipPath={clip}
             d={arcPath(layout.band.r, layout.a0 - 0.2, layout.a1 + 0.2, false)}
@@ -94,7 +101,7 @@ function Label({ slot, layout, settings }: { slot: SlotGeom; layout: LabelLayout
             strokeOpacity={labels.bandOpacity}
             strokeWidth={layout.band.width}
           />
-        )}
+        ))}
         {layout.lines.map((line, i) => {
           const id = `${P}-lbl-${slot.id}-${i}`
           return (
@@ -389,7 +396,7 @@ export function FanChart({ geom, settings, people, images, selected, dropTarget,
 
       <g>
         {geom.slots.map((slot) => {
-          const layout = layoutLabel(slot, people[slot.id], settings.labels)
+          const layout = layoutLabel(slot, people[slot.id], settings.labels, geom.byId.get(2)?.thickness)
           return layout ? <Label key={slot.id} slot={slot} layout={layout} settings={settings} /> : null
         })}
       </g>

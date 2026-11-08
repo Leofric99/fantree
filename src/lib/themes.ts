@@ -301,6 +301,7 @@ export function defaultSettings(): Settings {
   const settings: Settings = {
     layout: {
       generations: 5,
+      parentSide: 'father',
       span: 220,
       centerRadius: 0.115,
       ringGrowth: 0.08,

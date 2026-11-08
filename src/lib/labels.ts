@@ -11,7 +11,7 @@ export interface LabelLine {
 }
 
 export type LabelLayout =
-  | { mode: 'arc'; flipped: boolean; a0: number; a1: number; lines: LabelLine[]; band: { r: number; width: number } }
+  | { mode: 'arc'; flipped: boolean; a0: number; a1: number; lines: LabelLine[]; band: { r: number; width: number; a0?: number; a1?: number; rounded?: boolean } }
   | {
       mode: 'straight'
       /** Label frame origin and rotation (degrees). */
@@ -22,7 +22,8 @@ export type LabelLayout =
       band: { y: number; height: number; width: number }
     }
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
+// Shared limit for the overlay and text size control.
+export const MAX_LABEL_SCALE = 1.8
 
 export function arcPath(r: number, a0: number, a1: number, flipped: boolean): string {
   const p = (a: number) => `${(r * Math.cos(a)).toFixed(2)} ${(r * Math.sin(a)).toFixed(2)}`
@@ -30,7 +31,19 @@ export function arcPath(r: number, a0: number, a1: number, flipped: boolean): st
   return flipped ? `M ${p(a1)} A ${r} ${r} 0 ${large} 0 ${p(a0)}` : `M ${p(a0)} A ${r} ${r} 0 ${large} 1 ${p(a1)}`
 }
 
-export function layoutLabel(slot: SlotGeom, person: Person | undefined, labels: Settings['labels']): LabelLayout | null {
+/** A band with square outer corners and rounded corners on its inner edge. */
+export function centerBandPath(radius: number, width: number, a0: number, a1: number): string {
+  const inner = Math.max(0.01, radius - width / 2)
+  const outer = radius + width / 2
+  const corner = Math.min(width * 0.3, inner * (a1 - a0) * 0.2)
+  const angle = corner / inner
+  const point = (r: number, a: number) => `${(r * Math.cos(a)).toFixed(2)} ${(r * Math.sin(a)).toFixed(2)}`
+  const large = a1 - a0 > Math.PI ? 1 : 0
+  const innerLarge = a1 - a0 - 2 * angle > Math.PI ? 1 : 0
+  return `M ${point(outer, a0)} A ${outer} ${outer} 0 ${large} 1 ${point(outer, a1)} L ${point(inner + corner, a1)} Q ${point(inner, a1)} ${point(inner, a1 - angle)} A ${inner} ${inner} 0 ${innerLarge} 0 ${point(inner, a0 + angle)} Q ${point(inner, a0)} ${point(inner + corner, a0)} Z`
+}
+
+export function layoutLabel(slot: SlotGeom, person: Person | undefined, labels: Settings['labels'], parentThickness?: number): LabelLayout | null {
   if (!labels.show || !person) return null
   const rawName = person.name.trim()
   const name = labels.uppercase ? rawName.toUpperCase() : rawName
@@ -38,112 +51,76 @@ export function layoutLabel(slot: SlotGeom, person: Person | undefined, labels: 
   if (!name && !dates) return null
 
   const wf = FONTS[labels.font].widthFactor * (labels.uppercase ? 1.18 : 1)
-  const fit = (text: string, avail: number, max: number) => (text ? Math.min(max, avail / (text.length * wf)) : 0)
+  const extent = slot.isCenter ? parentThickness ?? slot.r2 : slot.thickness
+  const requestedHeight = extent * 0.3 * labels.size
+  const height = slot.isCenter ? Math.min(requestedHeight, slot.r2 * 0.8) : requestedHeight
+  const padding = height * 0.06
+  const availableWidth = slot.isCenter
+    ? slot.r2 * 1.6
+    : (slot.a1 - slot.a0) * slot.r1 * 0.82
 
-  if (slot.isCenter) {
-    const r = slot.r2
-    const base = clamp(r * 0.17, 12, 40) * labels.size
-    const lineCount = (name ? 1 : 0) + (dates ? 1 : 0)
-    const blockBottom = r * 0.82
-    const nameSize = fit(name, r * 1.25, base)
-    const dateSize = fit(dates, r * 1.1, base * 0.72)
-    const lines: LabelLine[] = []
-    let y = blockBottom - (dates ? dateSize * 0.3 : nameSize * 0.3)
-    if (dates) {
-      lines.push({ text: dates, size: dateSize, weight: 400, pos: y })
-      y -= dateSize * 1.1
+  // Greedy word wrapping, including long unbroken names. The estimate uses the
+  // same font metrics as the rest of the chart and also works for SVG export.
+  const wrap = (text: string, size: number): string[] => {
+    if (!text) return []
+    const capacity = Math.max(1, Math.floor(availableWidth / (wf * size)))
+    const result: string[] = []
+    let line = ''
+    for (const word of text.split(/\s+/)) {
+      let part = word
+      while (part.length > capacity) {
+        if (line) { result.push(line); line = '' }
+        result.push(part.slice(0, capacity))
+        part = part.slice(capacity)
+      }
+      if (!part) continue
+      if (line && line.length + 1 + part.length > capacity) {
+        result.push(line)
+        line = part
+      } else line = line ? `${line} ${part}` : part
     }
-    if (name) lines.push({ text: name, size: nameSize, weight: 600, pos: y })
-    const top = (lines.at(-1)?.pos ?? y) - (lines.at(-1)?.size ?? 0) * 0.95
-    const bottom = blockBottom + (lineCount ? (dates ? dateSize : nameSize) * 0.35 : 0)
-    return {
-      mode: 'straight',
-      x: 0,
-      y: 0,
-      rot: 0,
-      lines,
-      band: { y: top, height: bottom - top + r, width: r * 2.2 },
-    }
+    if (line) result.push(line)
+    return result
   }
 
-  const t = slot.thickness
-  const base = clamp(t * 0.15, 9, 34) * labels.size
-  const midNorm = ((slot.mid % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
-  const bottomHalf = midNorm > 0.02 && midNorm < Math.PI - 0.02
-  const pad = t * 0.07
-
-  // Arc text works when the segment is wider than it is deep; otherwise run text radially.
-  const innerArc = (slot.a1 - slot.a0) * slot.r1
-  if (innerArc >= t * 0.95) {
-    const flipped = bottomHalf
-    const edgeR = flipped ? slot.r2 : slot.r1
-    const availArc = (r: number) => (slot.a1 - slot.a0) * r * 0.86
-    const dir = flipped ? -1 : 1
-    let dateSize = fit(dates, availArc(edgeR), base * 0.74)
-    let nameSize = fit(name, availArc(edgeR + dir * (dateSize + pad)), base)
-    const block = (name ? nameSize * 1.05 : 0) + (dates ? dateSize * 1.1 : 0) + pad
-    const maxBlock = t * 0.42
-    if (block > maxBlock) {
-      const k = maxBlock / block
-      nameSize *= k
-      dateSize *= k
-    }
-    const lines: LabelLine[] = []
-    // "Visual bottom" sits on the inner edge for upright arcs, the outer edge for flipped ones.
-    let r = edgeR + dir * (pad * 1.4)
-    if (dates) {
-      r += dir * dateSize * (flipped ? 0.85 : 0.3)
-      lines.push({ text: dates, size: dateSize, weight: 400, pos: r })
-      r += dir * dateSize * (flipped ? 0.25 : 0.85)
-    }
-    if (name) {
-      r += dir * nameSize * (flipped ? (dates ? 0.95 : 0.8) : dates ? 0.25 : 0.3)
-      lines.push({ text: name, size: nameSize, weight: 600, pos: r })
-      r += dir * nameSize * (flipped ? 0.2 : 0.8)
-    }
-    const farR = r + dir * pad * 1.2
-    const bandEdge = edgeR - dir * 2
-    return {
-      mode: 'arc',
-      flipped,
-      a0: slot.a0,
-      a1: slot.a1,
-      lines,
-      band: { r: (bandEdge + farR) / 2, width: Math.abs(farR - bandEdge) },
-    }
+  let fontSize = height * 0.81
+  let rows: { text: string; size: number; weight: number }[] = []
+  for (let attempt = 0; attempt < 200; attempt++) {
+    rows = [
+      ...wrap(name, fontSize).map((text) => ({ text, size: fontSize, weight: 600 })),
+      ...wrap(dates, fontSize * 0.74).map((text) => ({ text, size: fontSize * 0.74, weight: 400 })),
+    ]
+    if (rows.reduce((sum, row) => sum + row.size * 1.08, 0) <= height - padding * 2) break
+    fontSize *= 0.92
   }
-
-  const midDeg = (slot.mid * 180) / Math.PI
-  const leftSide = Math.cos(slot.mid) < 0
-  const rot = leftSide ? midDeg + 180 : midDeg
-  const availLen = t * 0.86
-  const cross = (slot.a1 - slot.a0) * slot.r1 * 0.82
-  let nameSize = fit(name, availLen, base)
-  let dateSize = fit(dates, availLen, base * 0.74)
-  const blockH = nameSize * 1.1 + dateSize * 1.1
-  if (blockH > cross) {
-    const k = cross / blockH
-    nameSize *= k
-    dateSize *= k
-  }
-  const total = (name ? nameSize * 1.05 : 0) + (dates ? dateSize * 1.05 : 0)
   const lines: LabelLine[] = []
-  let y = -total / 2
-  if (name) {
-    y += nameSize * 0.85
-    lines.push({ text: name, size: nameSize, weight: 600, pos: y })
-    y += nameSize * 0.2
+  if (slot.isCenter) {
+    const radius = slot.r2
+    const blockHeight = rows.reduce((sum, row) => sum + row.size * 1.08, 0)
+    const inset = (height - blockHeight) / 2
+    let cursor = radius - height + inset
+    for (const row of rows) {
+      lines.push({ ...row, pos: cursor + row.size * 0.85 })
+      cursor += row.size * 1.08
+    }
+    const bandRadius = radius - height / 2
+    const maxWidth = Math.max(...rows.map((row) => row.text.length * wf * row.size))
+    const halfAngle = Math.min(Math.PI * 0.45, (maxWidth + height * 0.25) / (2 * bandRadius))
+    return { mode: 'arc', flipped: true, a0: Math.PI * 0.05, a1: Math.PI * 0.95, lines,
+      band: { r: bandRadius, width: height, a0: Math.PI / 2 - halfAngle, a1: Math.PI / 2 + halfAngle, rounded: true } }
   }
-  if (dates) {
-    y += dateSize * 0.85
-    lines.push({ text: dates, size: dateSize, weight: 400, pos: y })
+
+  const blockHeight = rows.reduce((sum, row) => sum + row.size * 1.08, 0)
+  const inset = (height - blockHeight) / 2
+
+  // The same path direction keeps every label oriented from the fan centre,
+  // even where that makes it upside down relative to the screen.
+  const flipped = false
+  let cursor = slot.r1 + height - inset
+  for (const row of rows) {
+    lines.push({ ...row, pos: cursor - 0.85 * row.size })
+    cursor -= row.size * 1.08
   }
-  return {
-    mode: 'straight',
-    x: slot.cx,
-    y: slot.cy,
-    rot,
-    lines,
-    band: { y: -total / 2 - pad * 0.6, height: total + pad * 1.2, width: t * 1.4 },
-  }
+  return { mode: 'arc', flipped, a0: slot.a0, a1: slot.a1, lines,
+    band: { r: slot.r1 + height / 2, width: height } }
 }

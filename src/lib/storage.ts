@@ -125,7 +125,7 @@ export async function loadProject(): Promise<Project | undefined> {
 
 export function referencedImages(project: Project): Set<string> {
   const ids = new Set<string>()
-  for (const p of Object.values(project.people)) if (p.photo) ids.add(p.photo.imageId)
+  for (const p of [...Object.values(project.people), ...Object.values(project.tree?.people ?? {})]) if (p.photo) ids.add(p.photo.imageId)
   return ids
 }
 

@@ -55,7 +55,7 @@ Export to PNG, JPEG, WebP or SVG at HD, 4K, 5K, 8K or 60 cm poster size at 300 d
 
 ### Local-First Projects
 
-FanTree autosaves locally and keeps full undo/redo history. Export a portable `.fantree` project file whenever you want a backup or need to move a chart to another browser or computer.
+Open the family tree in the Layout tab to select a different centre person. Your other branches and photo positions are kept when you switch, and are included in saved projects. In Layout, choose which parent is on the left to tell FanTree how to label each pair. FanTree autosaves locally and keeps full undo/redo history. Export a portable `.fantree` project file whenever you want a backup or need to move a chart to another browser or computer.
 
 ---
 

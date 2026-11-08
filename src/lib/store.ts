@@ -1,6 +1,7 @@
 import { produce, type Draft } from 'immer'
 import { create } from 'zustand'
 import { defaultSettings } from './themes'
+import { mirrorSlot } from './tree'
 import type { ImageMeta, Photo, Project, SlotId } from './types'
 
 const HISTORY_LIMIT = 150
@@ -76,14 +77,18 @@ export const useStore = create<State>()((set, get) => ({
     const { past, project, future } = get()
     const prev = past.at(-1)
     if (!prev) return
-    set({ project: prev, past: past.slice(0, -1), future: [project, ...future], lastKey: null })
+    const selected = get().selected
+    set({ project: prev, past: past.slice(0, -1), future: [project, ...future], lastKey: null,
+      selected: selected !== null && prev.settings.layout.parentSide !== project.settings.layout.parentSide ? mirrorSlot(selected) : selected })
   },
 
   redo: () => {
     const { past, project, future } = get()
     const [next, ...rest] = future
     if (!next) return
-    set({ project: next, past: [...past, project], future: rest, lastKey: null })
+    const selected = get().selected
+    set({ project: next, past: [...past, project], future: rest, lastKey: null,
+      selected: selected !== null && next.settings.layout.parentSide !== project.settings.layout.parentSide ? mirrorSlot(selected) : selected })
   },
 
   select: (id) => set({ selected: id }),

@@ -1189,3 +1189,14 @@ input[type='range']:focus-visible {
     transition: none !important;
   }
 }
+
+/* Compact family-tree navigator, kept outside the exported chart. */
+.tree-content { max-height: 360px; overflow: auto; }
+.tree-content p { font-size: 11px; opacity: .7; margin: 2px 4px 8px; }
+.tree-content ul { list-style: none; padding: 0; margin: 0; }
+.tree-content ul ul { margin-left: 15px; padding-left: 7px; border-left: 1px solid #8885; }
+.tree-person { display: flex; align-items: center; gap: 7px; width: 100%; padding: 4px; border: 0; border-radius: 6px; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; font-size: 12px; }
+.tree-person:hover, .tree-person.is-current { background: #8882; }
+.tree-person img, .tree-avatar { width: 30px; height: 30px; flex: 0 0 30px; border-radius: 50%; object-fit: cover; }
+.tree-avatar { display: grid; place-items: center; background: #8883; }
+.tree-person small { display: block; opacity: .7; font-size: 10px; }

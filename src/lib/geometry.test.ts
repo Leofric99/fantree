@@ -65,10 +65,10 @@ describe('labels', () => {
   const s = defaultSettings()
   const g = computeGeometry(s)
 
-  it('uses arc text for wide frames and radial text for narrow ones', () => {
+  it('uses arc text along the inner edge for wide and narrow frames', () => {
     const person = { name: 'Margaret Hodge', dates: '1891 – 1967' }
     expect(layoutLabel(g.byId.get(2)!, person, s.labels)?.mode).toBe('arc')
-    expect(layoutLabel(g.byId.get(40)!, person, s.labels)?.mode).toBe('straight')
+    expect(layoutLabel(g.byId.get(40)!, person, s.labels)?.mode).toBe('arc')
   })
 
   it('skips empty labels and respects the toggle', () => {
@@ -85,4 +85,112 @@ describe('labels', () => {
       }
     }
   })
+
+  it('uses the same overlay size regardless of name and scales it with the slider', () => {
+    for (const id of [1, 2, 40]) {
+      const slot = g.byId.get(id)!
+      const short = layoutLabel(slot, { name: 'Amy', dates: '' }, { ...s.labels, size: 0.7 })!
+      const long = layoutLabel(slot, { name: 'A very long family name that needs wrapping', dates: '1880 – 1950' }, { ...s.labels, size: 0.7 })!
+      const large = layoutLabel(slot, { name: 'Amy', dates: '' }, { ...s.labels, size: 1.4 })!
+      const bandHeight = (label: typeof short) => label.mode === 'straight' ? label.band.height : label.band.width
+      if (!slot.isCenter) {
+        expect(bandHeight(short)).toBeCloseTo(bandHeight(long))
+        expect(bandHeight(large)).toBeCloseTo(bandHeight(short) * 2)
+      }
+      expect(large.lines[0].size).toBeGreaterThan(short.lines[0].size)
+      expect(long.lines.length).toBeGreaterThan(1)
+      expect(long.lines.map((line) => line.text).join(' ').replace(/\s/g, '')).toBe('Averylongfamilynamethatneedswrapping1880–1950')
+    }
+  })
+
+  it('scales label text with the frame dimensions', () => {
+    const person = { name: 'Margaret', dates: '1900 – 1980' }
+    for (const id of [1, 2, 40]) {
+      const slot = g.byId.get(id)!
+      const scaled = { ...slot, r1: slot.r1 * 2, r2: slot.r2 * 2, cx: slot.cx * 2, cy: slot.cy * 2,
+        thickness: slot.thickness * 2, arcLen: slot.arcLen * 2,
+        box: { x: slot.box.x * 2, y: slot.box.y * 2, w: slot.box.w * 2, h: slot.box.h * 2 } }
+      const original = layoutLabel(slot, person, s.labels)!
+      const larger = layoutLabel(scaled, person, s.labels)!
+      original.lines.forEach((line, i) => expect(larger.lines[i].size).toBeCloseTo(line.size * 2))
+    }
+  })
+
+  it('keeps full-width backgrounds tight above and below text', () => {
+    const person = { name: 'Amy', dates: '' }
+    for (const id of [1, 2, 40]) {
+      const slot = g.byId.get(id)!
+      const label = layoutLabel(slot, person, s.labels)!
+      const line = label.lines[0]
+      if (label.mode === 'straight') {
+        expect(label.band.y + label.band.height).toBeCloseTo(slot.r2)
+        expect(label.band.width).toBeGreaterThanOrEqual(slot.r2 * 2)
+      } else {
+        expect(label.band.width).toBeLessThan(line.size * 1.25)
+      }
+    }
+  })
+
+  it('places curved name backgrounds against the visual bottom edge', () => {
+    const settings = defaultSettings()
+    settings.layout.span = 360
+    const geometry = computeGeometry(settings)
+    for (const slot of geometry.slots.filter((item) => !item.isCenter)) {
+      const label = layoutLabel(slot, { name: 'Amy', dates: '' }, settings.labels)!
+      if (label.mode !== 'arc') continue
+      const edge = label.band.r - label.band.width / 2
+      expect(edge).toBeCloseTo(slot.r1)
+    }
+  })
+
+  it('orients every ancestor label consistently relative to the fan centre', () => {
+    const settings = defaultSettings()
+    settings.layout.span = 360
+    for (const slot of computeGeometry(settings).slots.filter((item) => !item.isCenter)) {
+      const label = layoutLabel(slot, { name: 'Test', dates: '' }, settings.labels)!
+      expect(label.mode).toBe('arc')
+      if (label.mode === 'arc') expect(label.flipped).toBe(false)
+    }
+  })
+
+
+
+  it('matches the centre text scale to the parents when the text fits', () => {
+    const parent = g.byId.get(2)!
+    const centre = g.byId.get(1)!
+    for (const size of [0.5, 1, 1.5]) {
+      const labels = { ...s.labels, size }
+      const person = { name: 'A', dates: '' }
+      const hub = layoutLabel(centre, person, labels, parent.thickness)!
+      const parentLabel = layoutLabel(parent, person, labels)!
+      expect(hub.lines[0].size).toBeCloseTo(parentLabel.lines[0].size)
+
+    }
+  })
+
+  it('does not split ordinary centre names to fit the bottom tip of the circle', () => {
+    const label = layoutLabel(g.byId.get(1)!, { name: 'Natasha Hodges', dates: '' }, s.labels, g.byId.get(2)!.thickness)!
+    expect(label.lines.map((line) => line.text).join(' ')).toBe('Natasha Hodges')
+    expect(label.lines.every((line) => ['Natasha', 'Hodges', 'Natasha Hodges'].includes(line.text))).toBe(true)
+  })
+
+
+
+
+
+  it('curves the centre label at the bottom of the circle with rounded backing', () => {
+    const center = g.byId.get(1)!
+    const parent = g.byId.get(2)!
+    const person = { name: 'Amy', dates: '' }
+    const label = layoutLabel(center, person, s.labels, parent.thickness)!
+    const parentLabel = layoutLabel(parent, person, s.labels)!
+    if (label.mode !== 'arc' || parentLabel.mode !== 'arc') throw new Error('Expected curved labels')
+    expect(label.flipped).toBe(true)
+    expect(label.band.r + label.band.width / 2).toBeCloseTo(center.r2)
+    expect(label.band.width).toBeCloseTo(parentLabel.band.width)
+    expect(label.band.rounded).toBe(true)
+    expect(label.band.a0!).toBeGreaterThan(label.a0)
+    expect(label.band.a1!).toBeLessThan(label.a1)
+  })
+
 })

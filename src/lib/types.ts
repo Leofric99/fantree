@@ -43,6 +43,8 @@ export type FontId =
 export interface Settings {
   layout: {
     generations: number
+    /** Which parent appears first in each pair, from left to right. */
+    parentSide: 'father' | 'mother'
     /** Degrees covered by the fan. */
     span: number
     /** Centre circle radius as a fraction of the outer radius. */
@@ -107,6 +109,8 @@ export interface Project {
   version: 1 | 2
   settings: Settings
   people: Record<SlotId, Person>
+  /** People indexed relative to the original centre, plus the current centre's index. */
+  tree?: { center: SlotId; people: Record<SlotId, Person> }
 }
 
 export interface ImageMeta {
